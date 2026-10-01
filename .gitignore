@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.svg
+# Real dumps are confidential — only synthetic fixtures may be committed.
+*.sql
+!tests/fixtures/*.sql

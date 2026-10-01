@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQL Schema Diff</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>SQL Schema Diff</h1>
+  </header>
+
+  <form id="upload" class="upload">
+    <label class="drop" data-slot="old">
+      <span class="drop-title">A · stara wersja</span>
+      <span class="drop-file">Upuść plik .sql lub kliknij</span>
+      <input type="file" name="old" accept=".sql,text/plain" required>
+    </label>
+    <span class="arrow">→</span>
+    <label class="drop" data-slot="new">
+      <span class="drop-title">B · nowa wersja</span>
+      <span class="drop-file">Upuść plik .sql lub kliknij</span>
+      <input type="file" name="new" accept=".sql,text/plain" required>
+    </label>
+    <button type="submit" id="compare" disabled>Porównaj</button>
+  </form>
+
+  <div id="error" class="error" hidden></div>
+  <div id="warnings" class="warnings" hidden></div>
+
+  <section id="result" hidden>
+    <div class="toolbar">
+      <div id="summary" class="summary"></div>
+      <div class="controls">
+        <label><input type="checkbox" id="only-changes" checked> Tylko zmiany</label>
+        <input type="search" id="search" placeholder="Szukaj tabeli / kolumny…">
+        <button type="button" id="expand">Rozwiń</button>
+        <button type="button" id="collapse">Zwiń</button>
+        <button type="button" id="export" class="primary">Eksport SVG</button>
+      </div>
+    </div>
+    <div class="workspace">
+      <div id="canvas" class="canvas"></div>
+      <aside id="details" class="details">
+        <p class="muted">Kliknij element drzewa, aby zobaczyć szczegóły. Kliknij kółko, aby zwinąć lub rozwinąć gałąź.</p>
+      </aside>
+    </div>
+  </section>
+
+  <script src="vendor/d3.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
