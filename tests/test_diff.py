@@ -68,3 +68,9 @@ def test_groups_of_added_table_are_added():
     assert nodes["table:payments/columns"]["status"] == "added"
     assert nodes["table:audit_log/indexes"]["status"] == "removed"
     assert nodes["table:users/columns"]["status"] == "modified"
+
+
+def test_tables_are_top_level_followed_by_definition_groups():
+    top = [(c["kind"], c["name"]) for c in _result()["tree"]["children"]]
+    assert top == [("table", "audit_log"), ("table", "orders"), ("table", "payments"),
+                   ("table", "users"), ("group", "Widoki")]

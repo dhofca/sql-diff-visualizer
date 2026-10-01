@@ -17,15 +17,10 @@ DEFINITION_GROUPS = [
 
 
 def diff_schemas(old: Schema, new: Schema) -> dict:
-    tables = _group(
-        "tables",
-        "Tabele",
-        [
-            _table_node(name, old.tables.get(name), new.tables.get(name))
-            for name in sorted(old.tables.keys() | new.tables.keys(), key=str.lower)
-        ],
-    )
-    children = [tables]
+    children = [
+        _table_node(name, old.tables.get(name), new.tables.get(name))
+        for name in sorted(old.tables.keys() | new.tables.keys(), key=str.lower)
+    ]
     for kind, label in DEFINITION_GROUPS:
         names = {d.name for d in old.definitions.values() if d.kind == kind} | {
             d.name for d in new.definitions.values() if d.kind == kind

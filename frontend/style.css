@@ -148,6 +148,15 @@ button.primary, #compare { background: var(--accent); border-color: var(--accent
 }
 .details pre.before { border-left: 3px solid var(--removed); }
 .details pre.after { border-left: 3px solid var(--added); }
+.details table.columns td { padding: 3px 6px; }
+.details table.columns td.mark { width: 12px; padding-right: 0; font-weight: 700; }
+.details table.columns td.name { font-weight: 600; white-space: nowrap; }
+.details table.columns td.def { font: 11px/1.4 ui-monospace, Menlo, monospace; color: var(--muted); word-break: break-word; }
+.details table.columns .before { color: var(--removed); text-decoration: line-through; }
+.details table.columns .after { color: var(--added); }
+.details tr.row-added { background: #dafbe1; color: var(--added); }
+.details tr.row-removed { background: #ffebe9; color: var(--removed); }
+.details tr.row-modified { background: #fff8c5; color: var(--modified); }
 .details h3 { margin: 12px 0 0; font-size: 12px; color: var(--muted); font-weight: 600; }
 
 .tree-node { cursor: pointer; }

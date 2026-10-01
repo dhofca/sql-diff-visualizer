@@ -1,8 +1,9 @@
 # SQL Schema Diff
 
 Lokalne narzędzie do porównywania struktury bazy MySQL między releasami.
-Wrzucasz dwa pliki `.sql` (eksport struktury), dostajesz drzewo z zaznaczonymi różnicami
-i eksport do SVG.
+Wrzucasz dwa pliki `.sql` (eksport struktury): **PROD** (stan bazowy) i **PREPROD** (nowa wersja).
+Dostajesz drzewo z zaznaczonymi różnicami i eksport do SVG. „Dodane” = jest na preprod, brak na prod;
+„usunięte” = jest na prod, brak na preprod.
 
 Działa w całości lokalnie: serwer nasłuchuje tylko na `127.0.0.1`, pliki są przetwarzane w pamięci
 i nigdzie nie są zapisywane ani logowane, frontend nie ładuje nic z internetu.
@@ -38,7 +39,7 @@ białe znaki, komentarze, kolejność kolumn.
 
 ```
 backend/parser.py   dump → model (sqlglot + własny splitter instrukcji / DELIMITER)
-backend/diff.py     model A vs B → drzewo ze statusami added/removed/modified/unchanged
+backend/diff.py     model prod vs preprod → drzewo ze statusami added/removed/modified/unchanged
 backend/main.py     FastAPI: POST /api/diff + serwowanie frontendu
 frontend/           D3 (vendorowane), filtry, panel szczegółów, eksport SVG
 ```

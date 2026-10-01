@@ -19,6 +19,8 @@ const FIELD_LABEL = {
   collation: "collation", comment: "komentarz", kind: "rodzaj", columns: "kolumny",
   references: "referencja", on_delete: "ON DELETE", on_update: "ON UPDATE", definition: "definicja",
 };
+const ENV = { old: "PROD", new: "PREPROD" };
+const LEGEND = { added: "dodane na preprod", removed: "usunięte na preprod", modified: "zmienione" };
 const DEFINITION_KINDS = new Set(["view", "trigger", "procedure", "function", "event"]);
 
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
@@ -165,23 +167,28 @@ function render() {
   const visible = filterTree(data.tree, onlyChanges, query);
   const root = d3.hierarchy(visible, (d) => (!query && collapsed.has(d.key)) || !d.children.length ? null : d.children);
 
-  d3.tree().nodeSize([ROW, 1]).separation((a, b) => (a.parent === b.parent ? 1 : 1.25))(root);
+  const isTopGroup = (d) => d.depth === 1 && d.data.kind === "group";
+  d3.tree().nodeSize([ROW, 1]).separation((a, b) => {
+    if (a.parent !== b.parent) return 1.25;
+    return isTopGroup(a) !== isTopGroup(b) ? 2 : 1;
+  })(root);
 
-  const nodes = root.descendants();
+  // The schema root exists only to give D3 a single root; it is not drawn.
+  const nodes = root.descendants().filter((d) => d.depth > 0);
   nodes.forEach((d) => { d.label = labelOf(d); });
 
   const maxWidthAtDepth = [];
   nodes.forEach((d) => { maxWidthAtDepth[d.depth] = Math.max(maxWidthAtDepth[d.depth] || 0, d.label.width); });
-  const depthX = [PAD];
-  for (let i = 1; i < maxWidthAtDepth.length; i++) depthX[i] = depthX[i - 1] + 10 + maxWidthAtDepth[i - 1] + 8 + GAP;
+  const depthX = [0, PAD];
+  for (let i = 2; i < maxWidthAtDepth.length; i++) depthX[i] = depthX[i - 1] + 10 + maxWidthAtDepth[i - 1] + 8 + GAP;
 
-  const minX = d3.min(nodes, (d) => d.x);
-  const maxX = d3.max(nodes, (d) => d.x);
+  const minX = d3.min(nodes, (d) => d.x) ?? 0;
+  const maxX = d3.max(nodes, (d) => d.x) ?? 0;
   nodes.forEach((d) => { d.px = depthX[d.depth]; d.py = d.x - minX + HEADER + PAD; });
 
-  const contentWidth = d3.max(nodes, (d) => d.px + 10 + d.label.width + 8) + PAD;
+  const contentWidth = (d3.max(nodes, (d) => d.px + 10 + d.label.width + 8) ?? 0) + PAD;
   const width = Math.max(contentWidth, 720);
-  const height = maxX - minX + HEADER + PAD * 2;
+  const height = Math.max(maxX - minX + HEADER + PAD * 2, HEADER + PAD * 2 + 40);
 
   const container = $("#canvas");
   container.innerHTML = "";
@@ -194,7 +201,7 @@ function render() {
   svg.append("rect").attr("width", width).attr("height", height).attr("fill", "#ffffff");
   drawHeader(svg, onlyChanges, query);
 
-  svg.append("g").selectAll("path").data(root.links()).join("path")
+  svg.append("g").selectAll("path").data(root.links().filter((l) => l.source.depth > 0)).join("path")
     .attr("fill", "none")
     .attr("stroke", (l) => (l.target.data.status === "unchanged" ? LINK : STATUS[l.target.data.status].fg))
     .attr("stroke-opacity", (l) => (l.target.data.status === "unchanged" ? 1 : 0.45))
@@ -227,7 +234,8 @@ function render() {
       .attr("x", -4).attr("y", -10).attr("rx", 3)
       .attr("width", d.label.width + 8).attr("height", 20)
       .attr("fill", st.bg || "transparent");
-    if (n.match) bg.attr("stroke", "#0b5cad").attr("stroke-width", 1.5);
+    if (isTopGroup(d)) bg.attr("stroke", n.status === "unchanged" ? MUTED : st.fg).attr("stroke-dasharray", "3 2");
+    if (n.match) bg.attr("stroke", "#0b5cad").attr("stroke-width", 1.5).attr("stroke-dasharray", null);
     if (n.key === selectedKey) bg.attr("stroke", "#1f2328").attr("stroke-width", 1.5).attr("data-selected", "1");
 
     const text = label.append("text").attr("dy", "0.35em").attr("font-size", 13);
@@ -240,16 +248,16 @@ function render() {
     label.append("title").text([n.name, n.status === "removed" ? n.before : n.after].filter(Boolean).join("\n"));
   });
 
-  if (onlyChanges && data.tree.status === "unchanged") {
-    svg.append("text").attr("x", PAD).attr("y", HEADER + PAD + 40).attr("fill", MUTED).attr("font-size", 13)
-      .text("Brak różnic w strukturze.");
+  if (!nodes.length) {
+    svg.append("text").attr("x", PAD).attr("y", HEADER + PAD + 20).attr("fill", MUTED).attr("font-size", 13)
+      .text(query ? "Brak wyników dla wyszukiwanej frazy." : "Brak różnic w strukturze.");
   }
 }
 
 function drawHeader(svg, onlyChanges, query) {
   const g = svg.append("g").attr("transform", `translate(${PAD},${PAD + 4})`);
   g.append("text").attr("font-size", 15).attr("font-weight", 600).attr("fill", "#1f2328")
-    .text(`Diff struktury: ${data.files.old}  →  ${data.files.new}`);
+    .text(`Diff struktury: ${ENV.old} (${data.files.old})  →  ${ENV.new} (${data.files.new})`);
   const filters = [onlyChanges ? "tylko zmiany" : "wszystkie elementy", query ? `filtr: "${query}"` : null].filter(Boolean);
   g.append("text").attr("y", 20).attr("font-size", 12).attr("fill", MUTED)
     .text(`${summaryText()}  ·  ${filters.join(", ")}`);
@@ -258,7 +266,7 @@ function drawHeader(svg, onlyChanges, query) {
     const st = STATUS[key];
     const item = g.append("g").attr("transform", `translate(${x},34)`);
     item.append("rect").attr("width", 14).attr("height", 14).attr("rx", 3).attr("fill", st.bg).attr("stroke", st.fg);
-    const label = `${st.mark} ${st.label}`;
+    const label = `${st.mark} ${LEGEND[key]}`;
     item.append("text").attr("x", 20).attr("y", 11).attr("font-size", 12).attr("fill", st.fg).text(label);
     x += 20 + textWidth(label, 12) + 22;
   }
@@ -283,10 +291,20 @@ function toggleNode(n) {
   render();
 }
 
+function findNode(key, node = data.tree) {
+  if (node.key === key) return node;
+  for (const child of node.children) {
+    const found = findNode(key, child);
+    if (found) return found;
+  }
+  return null;
+}
+
 function selectNode(n) {
   selectedKey = n.key;
   render();
-  showDetails(n);
+  // Rendered nodes are filtered copies; the panel needs the full, unfiltered node.
+  showDetails(findNode(n.key));
 }
 
 function showDetails(n) {
@@ -309,26 +327,45 @@ function showDetails(n) {
   const isDefinition = DEFINITION_KINDS.has(n.kind);
   if (n.changes && !isDefinition) {
     panel.append(h("table", {},
-      h("tr", {}, h("th", {}, "pole"), h("th", {}, "A"), h("th", {}, "B")),
+      h("tr", {}, h("th", {}, "pole"), h("th", {}, ENV.old), h("th", {}, ENV.new)),
       n.changes.map((c) => h("tr", {},
         h("td", {}, FIELD_LABEL[c.field] || c.field),
         h("td", { class: "before" }, fmt(c.field, c.before)),
         h("td", { class: "after" }, fmt(c.field, c.after)))),
     ));
   }
+  if (n.kind === "table") {
+    panel.append(columnList(n));
+    return;
+  }
   if (n.before !== undefined && (n.status !== "unchanged" || isDefinition)) {
-    panel.append(h("h3", {}, "A · stara wersja"), h("pre", { class: "before" }, n.before || "∅"));
+    panel.append(h("h3", {}, ENV.old), h("pre", { class: "before" }, n.before || "∅"));
   }
   if (n.after !== undefined && n.status !== "removed") {
-    panel.append(h("h3", {}, n.status === "unchanged" ? "Definicja" : "B · nowa wersja"), h("pre", { class: "after" }, n.after || "∅"));
+    panel.append(h("h3", {}, n.status === "unchanged" ? "Definicja" : ENV.new), h("pre", { class: "after" }, n.after || "∅"));
   }
+}
+
+function columnList(table) {
+  const columns = table.children.find((c) => c.key === `${table.key}/columns`)?.children || [];
+  const definition = (c) => {
+    if (c.status === "modified") return [h("div", { class: "before" }, c.before), h("div", { class: "after" }, c.after)];
+    return c.status === "removed" ? c.before : c.after;
+  };
+  return h("div", {},
+    h("h3", {}, `Kolumny (${columns.length})`),
+    h("table", { class: "columns" },
+      columns.map((c) => h("tr", { class: `row-${c.status}` },
+        h("td", { class: "mark" }, STATUS[c.status].mark),
+        h("td", { class: "name" }, c.name),
+        h("td", { class: "def" }, definition(c))))));
 }
 
 function showWarnings() {
   const box = $("#warnings");
   const items = [
-    ...data.warnings.old.map((w) => `A: ${w}`),
-    ...data.warnings.new.map((w) => `B: ${w}`),
+    ...data.warnings.old.map((w) => `${ENV.old}: ${w}`),
+    ...data.warnings.new.map((w) => `${ENV.new}: ${w}`),
   ];
   box.hidden = !items.length;
   box.innerHTML = "";
@@ -357,8 +394,7 @@ function exportSvg() {
   });
   const source = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg);
   const url = URL.createObjectURL(new Blob([source], { type: "image/svg+xml;charset=utf-8" }));
-  const base = (name) => name.replace(/\.sql$/i, "").replace(/[^\w.-]+/g, "_");
-  const a = h("a", { href: url, download: `schema-diff_${base(data.files.old)}_vs_${base(data.files.new)}.svg` });
+  const a = h("a", { href: url, download: `schema-diff_prod-vs-preprod_${new Date().toISOString().slice(0, 10)}.svg` });
   document.body.append(a);
   a.click();
   a.remove();
@@ -369,7 +405,7 @@ $("#only-changes").addEventListener("change", render);
 $("#search").addEventListener("input", render);
 $("#expand").addEventListener("click", () => { collapsed.clear(); render(); });
 $("#collapse").addEventListener("click", () => {
-  walk(data.tree, (n, depth) => { if (n.children.length && depth >= 2) collapsed.add(n.key); });
+  walk(data.tree, (n, depth) => { if (n.children.length && depth >= 1) collapsed.add(n.key); });
   render();
 });
 $("#export").addEventListener("click", exportSvg);
