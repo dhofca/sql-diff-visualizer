@@ -1,26 +1,26 @@
 "use strict";
 
 const STATUS = {
-  added: { mark: "+", fg: "#1a7f37", bg: "#dafbe1", label: "dodane" },
-  removed: { mark: "−", fg: "#cf222e", bg: "#ffebe9", label: "usunięte" },
-  modified: { mark: "~", fg: "#9a6700", bg: "#fff8c5", label: "zmienione" },
-  unchanged: { mark: "", fg: "#1f2328", bg: null, label: "bez zmian" },
+  added: { mark: "+", fg: "#1a7f37", bg: "#dafbe1", label: "added" },
+  removed: { mark: "−", fg: "#cf222e", bg: "#ffebe9", label: "removed" },
+  modified: { mark: "~", fg: "#9a6700", bg: "#fff8c5", label: "modified" },
+  unchanged: { mark: "", fg: "#1f2328", bg: null, label: "unchanged" },
 };
 const KIND_LABEL = {
-  table: "tabela", column: "kolumna", index: "indeks", fk: "klucz obcy", view: "widok",
-  trigger: "trigger", procedure: "procedura", function: "funkcja", event: "event", group: "grupa",
+  table: "table", column: "column", index: "index", fk: "foreign key", view: "view",
+  trigger: "trigger", procedure: "procedure", function: "function", event: "event", group: "group",
 };
 const SUMMARY_LABEL = {
-  table: "Tabele", column: "Kolumny", index: "Indeksy", fk: "Klucze obce", view: "Widoki",
-  trigger: "Triggery", procedure: "Procedury", function: "Funkcje", event: "Eventy",
+  table: "Tables", column: "Columns", index: "Indexes", fk: "Foreign keys", view: "Views",
+  trigger: "Triggers", procedure: "Procedures", function: "Functions", event: "Events",
 };
 const FIELD_LABEL = {
-  type: "typ", nullable: "null", default: "default", extra: "extra", charset: "charset",
-  collation: "collation", comment: "komentarz", kind: "rodzaj", columns: "kolumny",
-  references: "referencja", on_delete: "ON DELETE", on_update: "ON UPDATE", definition: "definicja",
+  type: "type", nullable: "null", default: "default", extra: "extra", charset: "charset",
+  collation: "collation", comment: "comment", kind: "kind", columns: "columns",
+  references: "references", on_delete: "ON DELETE", on_update: "ON UPDATE", definition: "definition",
 };
 const ENV = { old: "PROD", new: "PREPROD" };
-const LEGEND = { added: "dodane na preprod", removed: "usunięte na preprod", modified: "zmienione" };
+const LEGEND = { added: "added in preprod", removed: "removed in preprod", modified: "modified" };
 const DEFINITION_KINDS = new Set(["view", "trigger", "procedure", "function", "event"]);
 
 const FONT_FAMILY = "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
@@ -59,7 +59,7 @@ function refreshUpload() {
   form.querySelectorAll(".drop").forEach((drop) => {
     const file = drop.querySelector("input").files[0];
     drop.classList.toggle("filled", Boolean(file));
-    drop.querySelector(".drop-file").textContent = file ? file.name : "Upuść plik .sql lub kliknij";
+    drop.querySelector(".drop-file").textContent = file ? file.name : "Drop a .sql file or click";
   });
   $("#compare").disabled = [...form.querySelectorAll("input[type=file]")].some((i) => !i.files.length);
 }
@@ -83,7 +83,7 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
   $("#error").hidden = true;
   $("#compare").disabled = true;
-  $("#compare").textContent = "Porównuję…";
+  $("#compare").textContent = "Comparing…";
   try {
     const res = await fetch("api/diff", { method: "POST", body: new FormData(form) });
     const body = await res.json();
@@ -97,10 +97,10 @@ form.addEventListener("submit", async (e) => {
     render();
     showDetails(null);
   } catch (err) {
-    $("#error").textContent = `Błąd: ${err.message}`;
+    $("#error").textContent = `Error: ${err.message}`;
     $("#error").hidden = false;
   } finally {
-    $("#compare").textContent = "Porównaj";
+    $("#compare").textContent = "Compare";
     refreshUpload();
   }
 });
@@ -139,7 +139,7 @@ function fmt(field, value) {
 
 function detailText(n) {
   if (n.kind === "group") return n.total ? `(${n.total})` : "";
-  if (DEFINITION_KINDS.has(n.kind)) return n.status === "modified" ? "definicja zmieniona" : "";
+  if (DEFINITION_KINDS.has(n.kind)) return n.status === "modified" ? "definition changed" : "";
   let text;
   if (n.changes) {
     text = n.changes.map((c) => `${FIELD_LABEL[c.field] || c.field}: ${fmt(c.field, c.before)} → ${fmt(c.field, c.after)}`).join("; ");
@@ -250,15 +250,15 @@ function render() {
 
   if (!nodes.length) {
     svg.append("text").attr("x", PAD).attr("y", HEADER + PAD + 20).attr("fill", MUTED).attr("font-size", 13)
-      .text(query ? "Brak wyników dla wyszukiwanej frazy." : "Brak różnic w strukturze.");
+      .text(query ? "No results for this search." : "No structural differences.");
   }
 }
 
 function drawHeader(svg, onlyChanges, query) {
   const g = svg.append("g").attr("transform", `translate(${PAD},${PAD + 4})`);
   g.append("text").attr("font-size", 15).attr("font-weight", 600).attr("fill", "#1f2328")
-    .text(`Diff struktury: ${ENV.old} (${data.files.old})  →  ${ENV.new} (${data.files.new})`);
-  const filters = [onlyChanges ? "tylko zmiany" : "wszystkie elementy", query ? `filtr: "${query}"` : null].filter(Boolean);
+    .text(`Schema diff: ${ENV.old} (${data.files.old})  →  ${ENV.new} (${data.files.new})`);
+  const filters = [onlyChanges ? "changes only" : "all items", query ? `filter: "${query}"` : null].filter(Boolean);
   g.append("text").attr("y", 20).attr("font-size", 12).attr("fill", MUTED)
     .text(`${summaryText()}  ·  ${filters.join(", ")}`);
   let x = 0;
@@ -280,7 +280,7 @@ function summaryText() {
     const changes = [["added", "+"], ["removed", "−"], ["modified", "~"]].filter(([s]) => c[s]).map(([s, m]) => `${m}${c[s]}`);
     if (changes.length) parts.push(`${label} ${changes.join(" ")}`);
   }
-  return parts.length ? parts.join(" · ") : "Brak różnic";
+  return parts.length ? parts.join(" · ") : "No differences";
 }
 
 /* ---------- interaction ---------- */
@@ -311,7 +311,7 @@ function showDetails(n) {
   const panel = $("#details");
   panel.innerHTML = "";
   if (!n) {
-    panel.append(h("p", { class: "muted" }, "Kliknij element drzewa, aby zobaczyć szczegóły. Kliknij kółko, aby zwinąć lub rozwinąć gałąź."));
+    panel.append(h("p", { class: "muted" }, "Click a tree item to see its details. Click the circle to expand or collapse a branch."));
     return;
   }
   panel.append(
@@ -327,7 +327,7 @@ function showDetails(n) {
   const isDefinition = DEFINITION_KINDS.has(n.kind);
   if (n.changes && !isDefinition) {
     panel.append(h("table", {},
-      h("tr", {}, h("th", {}, "pole"), h("th", {}, ENV.old), h("th", {}, ENV.new)),
+      h("tr", {}, h("th", {}, "field"), h("th", {}, ENV.old), h("th", {}, ENV.new)),
       n.changes.map((c) => h("tr", {},
         h("td", {}, FIELD_LABEL[c.field] || c.field),
         h("td", { class: "before" }, fmt(c.field, c.before)),
@@ -342,7 +342,7 @@ function showDetails(n) {
     panel.append(h("h3", {}, ENV.old), h("pre", { class: "before" }, n.before || "∅"));
   }
   if (n.after !== undefined && n.status !== "removed") {
-    panel.append(h("h3", {}, n.status === "unchanged" ? "Definicja" : ENV.new), h("pre", { class: "after" }, n.after || "∅"));
+    panel.append(h("h3", {}, n.status === "unchanged" ? "Definition" : ENV.new), h("pre", { class: "after" }, n.after || "∅"));
   }
 }
 
@@ -353,7 +353,7 @@ function columnList(table) {
     return c.status === "removed" ? c.before : c.after;
   };
   return h("div", {},
-    h("h3", {}, `Kolumny (${columns.length})`),
+    h("h3", {}, `Columns (${columns.length})`),
     h("table", { class: "columns" },
       columns.map((c) => h("tr", { class: `row-${c.status}` },
         h("td", { class: "mark" }, STATUS[c.status].mark),
@@ -369,7 +369,7 @@ function showWarnings() {
   ];
   box.hidden = !items.length;
   box.innerHTML = "";
-  if (items.length) box.append(h("strong", {}, "Ostrzeżenia parsera"), h("ul", {}, items.map((i) => h("li", {}, i))));
+  if (items.length) box.append(h("strong", {}, "Parser warnings"), h("ul", {}, items.map((i) => h("li", {}, i))));
 }
 
 function showSummary() {

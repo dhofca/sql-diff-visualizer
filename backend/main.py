@@ -17,13 +17,13 @@ app = FastAPI(title="SQL Schema Diff", docs_url=None, redoc_url=None, openapi_ur
 async def _read_sql(upload: UploadFile) -> str:
     data = await upload.read(MAX_FILE_BYTES + 1)
     if len(data) > MAX_FILE_BYTES:
-        raise HTTPException(413, f"Plik {upload.filename} przekracza {MAX_FILE_BYTES // 1024 // 1024} MB")
+        raise HTTPException(413, f"File {upload.filename} exceeds {MAX_FILE_BYTES // 1024 // 1024} MB")
     for encoding in ("utf-8-sig", "latin-1"):
         try:
             return data.decode(encoding)
         except UnicodeDecodeError:
             continue
-    raise HTTPException(400, f"Nie można odczytać pliku {upload.filename}")
+    raise HTTPException(400, f"Cannot decode file {upload.filename}")
 
 
 @app.post("/api/diff")

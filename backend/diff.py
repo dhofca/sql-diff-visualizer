@@ -8,11 +8,11 @@ from .models import Schema, Table
 ADDED, REMOVED, MODIFIED, UNCHANGED = "added", "removed", "modified", "unchanged"
 
 DEFINITION_GROUPS = [
-    ("VIEW", "Widoki"),
-    ("TRIGGER", "Triggery"),
-    ("PROCEDURE", "Procedury"),
-    ("FUNCTION", "Funkcje"),
-    ("EVENT", "Eventy"),
+    ("VIEW", "Views"),
+    ("TRIGGER", "Triggers"),
+    ("PROCEDURE", "Procedures"),
+    ("FUNCTION", "Functions"),
+    ("EVENT", "Events"),
 ]
 
 
@@ -37,7 +37,7 @@ def diff_schemas(old: Schema, new: Schema) -> dict:
                     ],
                 )
             )
-    root = _group("schema", "Schemat", children)
+    root = _group("schema", "Schema", children)
     return {"tree": root, "summary": _summary(root), "warnings": {"old": old.warnings, "new": new.warnings}}
 
 
@@ -57,9 +57,9 @@ def _table_node(name: str, old: Optional[Table], new: Optional[Table]) -> dict:
         )
 
     node["children"] = [
-        section("columns", "column", "Kolumny"),
-        section("indexes", "index", "Indeksy"),
-        section("foreign_keys", "fk", "Klucze obce"),
+        section("columns", "column", "Columns"),
+        section("indexes", "index", "Indexes"),
+        section("foreign_keys", "fk", "Foreign keys"),
     ]
     node["children"] = [c for c in node["children"] if c["children"]]
     if node["status"] == UNCHANGED and any(c["status"] != UNCHANGED for c in node["children"]):

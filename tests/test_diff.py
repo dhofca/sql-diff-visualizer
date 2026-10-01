@@ -73,4 +73,4 @@ def test_groups_of_added_table_are_added():
 def test_tables_are_top_level_followed_by_definition_groups():
     top = [(c["kind"], c["name"]) for c in _result()["tree"]["children"]]
     assert top == [("table", "audit_log"), ("table", "orders"), ("table", "payments"),
-                   ("table", "users"), ("group", "Widoki")]
+                   ("table", "users"), ("group", "Views")]

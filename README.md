@@ -1,53 +1,53 @@
 # SQL Schema Diff
 
-Lokalne narzędzie do porównywania struktury bazy MySQL między releasami.
-Wrzucasz dwa pliki `.sql` (eksport struktury): **PROD** (stan bazowy) i **PREPROD** (nowa wersja).
-Dostajesz drzewo z zaznaczonymi różnicami i eksport do SVG. „Dodane” = jest na preprod, brak na prod;
-„usunięte” = jest na prod, brak na preprod.
+A local tool for comparing MySQL database structure between environments.
+Upload two `.sql` structure dumps: **PROD** (baseline) and **PREPROD** (new version).
+You get a tree with the differences highlighted, exportable to SVG. "Added" = present in preprod, missing
+in prod; "removed" = present in prod, missing in preprod.
 
-Działa w całości lokalnie: serwer nasłuchuje tylko na `127.0.0.1`, pliki są przetwarzane w pamięci
-i nigdzie nie są zapisywane ani logowane, frontend nie ładuje nic z internetu.
+Runs entirely locally: the server listens on `127.0.0.1` only, files are processed in memory and are never
+stored or logged, and the frontend loads nothing from the internet.
 
-## Uruchomienie
+## Running
 
 ```bash
-./run.sh            # pierwsze uruchomienie tworzy .venv i instaluje zależności
+./run.sh            # first run creates .venv and installs dependencies
 # → http://127.0.0.1:8765
 ```
 
-## Eksport struktury
+## Exporting the structure
 
 ```bash
 mysqldump --no-data --routines --triggers --events -u USER -p DB > release_X.sql
 ```
 
-## Co jest porównywane
+## What is compared
 
-| Element | Atrybuty |
+| Element | Attributes |
 |---|---|
-| Tabele | engine, charset, collate, row_format, comment, CHECK |
-| Kolumny | typ, NULL/NOT NULL, default, AUTO_INCREMENT, ON UPDATE, generated, charset, collation, comment |
-| Indeksy | rodzaj (PRIMARY/UNIQUE/INDEX/FULLTEXT/SPATIAL), kolumny |
-| Klucze obce | kolumny, referencja, ON DELETE / ON UPDATE |
-| Widoki, triggery, procedury, funkcje, eventy | znormalizowany tekst definicji |
+| Tables | engine, charset, collate, row_format, comment, CHECK |
+| Columns | type, NULL/NOT NULL, default, AUTO_INCREMENT, ON UPDATE, generated, charset, collation, comment |
+| Indexes | kind (PRIMARY/UNIQUE/INDEX/FULLTEXT/SPATIAL), columns |
+| Foreign keys | columns, references, ON DELETE / ON UPDATE |
+| Views, triggers, procedures, functions, events | normalized definition text |
 
-Normalizacja (ignorowane, by uniknąć fałszywych różnic): licznik `AUTO_INCREMENT=`, `DEFINER`,
-`ALGORITHM`, `SQL SECURITY`, szerokość wyświetlania typów całkowitych (`int(11)` = `int`, poza `tinyint(1)`),
-białe znaki, komentarze, kolejność kolumn.
+Normalization (ignored to avoid false positives): the `AUTO_INCREMENT=` counter, `DEFINER`,
+`ALGORITHM`, `SQL SECURITY`, integer display width (`int(11)` = `int`, except `tinyint(1)`),
+whitespace, comments, column order.
 
-## Struktura
+## Layout
 
 ```
-backend/parser.py   dump → model (sqlglot + własny splitter instrukcji / DELIMITER)
-backend/diff.py     model prod vs preprod → drzewo ze statusami added/removed/modified/unchanged
-backend/main.py     FastAPI: POST /api/diff + serwowanie frontendu
-frontend/           D3 (vendorowane), filtry, panel szczegółów, eksport SVG
+backend/parser.py   dump → model (sqlglot + custom statement / DELIMITER splitter)
+backend/diff.py     prod vs preprod model → tree with added/removed/modified/unchanged statuses
+backend/main.py     FastAPI: POST /api/diff + serves the frontend
+frontend/           D3 (vendored), filters, details panel, SVG export
 ```
 
-## Testy
+## Tests
 
 ```bash
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python -m pytest
-python scripts/generate_fixtures.py /tmp   # syntetyczna para dumpów ~110 tabel
+python scripts/generate_fixtures.py /tmp   # synthetic pair of ~110-table dumps
 ```

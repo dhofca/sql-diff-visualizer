@@ -44,7 +44,7 @@ def parse_schema(sql: str) -> Schema:
             if table:
                 schema.tables[table.name] = table
         else:
-            schema.warnings.append(f"Pominięto nieobsługiwaną instrukcję: {head.split('(')[0][:60]}")
+            schema.warnings.append(f"Skipped unsupported statement: {head.split('(')[0][:60]}")
 
     # mysqldump creates placeholder tables for views; the real view replaces them.
     for item in schema.definitions.values():
@@ -128,11 +128,11 @@ def _parse_table(statement: str, warnings: List[str]) -> Optional[Table]:
     except Exception as error:
         name = re.search(r"TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(`[^`]+`|\S+)", statement, re.IGNORECASE)
         label = _unquote(name.group(1)) if name else "?"
-        warnings.append(f"Nie udało się sparsować tabeli {label}: {type(error).__name__}")
+        warnings.append(f"Could not parse table {label}: {type(error).__name__}")
         return None
 
     if not isinstance(create, exp.Create) or not isinstance(create.this, exp.Schema):
-        warnings.append("Pominięto CREATE TABLE bez definicji kolumn (np. CREATE TABLE ... LIKE)")
+        warnings.append("Skipped CREATE TABLE without column definitions (e.g. CREATE TABLE ... LIKE)")
         return None
 
     table = Table(name=create.this.this.name)
