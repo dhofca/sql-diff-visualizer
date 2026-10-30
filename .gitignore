@@ -5,3 +5,4 @@ __pycache__/
 # Real dumps are confidential — only synthetic fixtures may be committed.
 *.sql
 !tests/fixtures/*.sql
+.DS_Store
